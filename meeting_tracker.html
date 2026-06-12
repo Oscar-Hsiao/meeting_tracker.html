@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>職安委員會會議追蹤管理系統</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Microsoft JhengHei', Arial, sans-serif; background: #f0f4f8; color: #2d3748; }
+    .header {
+      background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%);
+      color: white; padding: 20px 30px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .header h1 { font-size: 1.4rem; font-weight: 700; }
+    .header .subtitle { font-size: 0.85rem; opacity: 0.85; margin-top: 4px; }
+    .header .badge {
+      background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 20px; padding: 6px 16px; font-size: 0.8rem;
+    }
+    .meta-bar {
+      background: white; padding: 14px 30px;
+      display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+      border-bottom: 2px solid #e2e8f0; box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .meta-bar label { font-size: 0.82rem; color: #718096; font-weight: 600; }
+    .meta-bar input, .meta-bar select {
+      border: 1px solid #cbd5e0; border-radius: 6px;
+      padding: 6px 10px; font-size: 0.85rem; color: #2d3748;
+      font-family: inherit;
+    }
+    .meta-bar input:focus, .meta-bar select:focus {
+      outline: none; border-color: #3182ce; box-shadow: 0 0 0 2px rgba(49,130,206,0.2);
+    }
+    .stats-bar {
+      display: flex; gap: 12px; padding: 14px 30px;
+      background: #edf2f7; flex-wrap: wrap;
+    }
+    .stat-card {
+      background: white; border-radius: 10px; padding: 10px 18px;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06); flex: 1; min-width: 120px;
+    }
+    .stat-icon { font-size: 1.4rem; }
+    .stat-num { font-size: 1.4rem; font-weight: 800; }
+    .stat-label { font-size: 0.72rem; color: #718096; }
+    .stat-done .stat-num { color: #38a169; }
+    .stat-pending .stat-num { color: #e53e3e; }
+    .stat-partial .stat-num { color: #d69e2e; }
+    .stat-na .stat-num { color: #a0aec0; }
+    .main { padding: 20px 30px; }
+    .section-title {
+      font-size: 0.95rem; font-weight: 700; color: #2b6cb0;
+      margin-bottom: 12px; padding-bottom: 6px;
+      border-bottom: 2px solid #bee3f8;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .item-card {
+      background: white; border-radius: 12px; margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border-left: 5px solid #cbd5e0;
+      transition: all 0.2s; overflow: hidden;
+    }
+    .item-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+    .item-card.done { border-left-color: #38a169; }
+    .item-card.pending { border-left-color: #e53e3e; }
+    .item-card.partial { border-left-color: #d69e2e; }
+    .item-card.na { border-left-color: #a0aec0; }
+    .item-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 18px; cursor: pointer; user-select: none;
+    }
+    .item-num {
+      background: #2b6cb0; color: white;
+      border-radius: 50%; width: 30px; height: 30px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 700; flex-shrink: 0;
+    }
+    .item-title { font-size: 0.92rem; font-weight: 600; flex: 1; }
+    .item-status-badge {
+      padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+    }
+    .badge-done { background: #c6f6d5; color: #276749; }
+    .badge-pending { background: #fed7d7; color: #9b2c2c; }
+    .badge-partial { background: #fefcbf; color: #7b6002; }
+    .badge-na { background: #e2e8f0; color: #4a5568; }
+    .expand-icon { color: #a0aec0; font-size: 0.9rem; transition: transform 0.2s; }
+    .expanded .expand-icon { transform: rotate(180deg); }
+    .item-body { display: none; padding: 0 18px 18px; border-top: 1px solid #f7fafc; }
+    .item-body.open { display: block; }
+    .field-group { margin-top: 14px; }
+    .field-label {
+      font-size: 0.78rem; font-weight: 700; color: #4a5568;
+      margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+    }
+    .field-label .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    textarea, input[type="text"] {
+      width: 100%; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 10px 12px; font-size: 0.85rem; font-family: inherit;
+      resize: vertical; min-height: 70px; color: #2d3748; transition: border-color 0.2s;
+    }
+    textarea:focus, input[type="text"]:focus {
+      outline: none; border-color: #3182ce; box-shadow: 0 0 0 2px rgba(49,130,206,0.15);
+    }
+    .status-selector { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .status-btn {
+      padding: 6px 14px; border-radius: 20px; border: 2px solid transparent;
+      font-size: 0.78rem; font-weight: 700; cursor: pointer;
+      transition: all 0.15s; font-family: inherit;
+    }
+    .status-btn.active-done { background: #c6f6d5; border-color: #38a169; color: #276749; }
+    .status-btn.active-partial { background: #fefcbf; border-color: #d69e2e; color: #7b6002; }
+    .status-btn.active-pending { background: #fed7d7; border-color: #e53e3e; color: #9b2c2c; }
+    .status-btn.active-na { background: #e2e8f0; border-color: #a0aec0; color: #4a5568; }
+    .status-btn:not([class*="active"]) { background: #f7fafc; border-color: #e2e8f0; color: #718096; }
+    .status-btn:hover:not([class*="active"]) { background: #edf2f7; }
+    .carryover-box {
+      background: #fff5f5; border: 1px dashed #fc8181; border-radius: 8px;
+      padding: 10px 14px; margin-top: 10px;
+    }
+    .carryover-box .co-label {
+      font-size: 0.75rem; font-weight: 700; color: #c53030; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .carryover-box textarea { border-color: #fed7d7; min-height: 55px; background: white; }
+    .action-bar {
+      display: flex; gap: 10px; padding: 16px 30px;
+      background: white; border-top: 2px solid #e2e8f0;
+      position: sticky; bottom: 0; z-index: 10;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.08); flex-wrap: wrap;
+    }
+    .btn {
+      padding: 10px 22px; border-radius: 8px; border: none;
+      font-size: 0.85rem; font-weight: 700; cursor: pointer;
+      font-family: inherit; transition: all 0.15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-primary { background: #2b6cb0; color: white; }
+    .btn-primary:hover { background: #2c5282; }
+    .btn-success { background: #38a169; color: white; }
+    .btn-success:hover { background: #276749; }
+    .btn-warning { background: #d69e2e; color: white; }
+    .btn-warning:hover { background: #b7791f; }
+    .btn-outline { background: white; color: #4a5568; border: 1px solid #cbd5e0; }
+    .btn-outline:hover { background: #f7fafc; }
+    .btn-save { background: #553c9a; color: white; }
+    .btn-save:hover { background: #44337a; }
+    .btn-load { background: #2c7a7b; color: white; }
+    .btn-load:hover { background: #285e61; }
+    .pending-summary {
+      background: #fff5f5; border: 2px solid #fc8181; border-radius: 12px;
+      padding: 16px 20px; margin-bottom: 20px;
+    }
+    .pending-summary h3 {
+      color: #c53030; font-size: 0.9rem; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .pending-list { list-style: none; }
+    .pending-list li {
+      padding: 6px 0; font-size: 0.84rem; color: #742a2a;
+      border-bottom: 1px dashed #fed7d7; display: flex; align-items: flex-start; gap: 8px;
+    }
+    .pending-list li:last-child { border-bottom: none; }
+    .pending-list li::before { content: "⚠️"; flex-shrink: 0; }
+    /* 儲存成功提示 */
+    .save-toast {
+      position: fixed; bottom: 90px; right: 24px;
+      background: #276749; color: white; padding: 10px 20px;
+      border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+      opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999;
+    }
+    .save-toast.show { opacity: 1; }
+    @media print {
+      .action-bar, .meta-bar { display: none; }
+      .item-body { display: block !important; }
+      body { background: white; }
+      .item-card { box-shadow: none; border: 1px solid #e2e8f0; }
+    }
+    @media (max-width: 600px) {
+      .header { padding: 14px 16px; }
+      .main { padding: 14px 16px; }
+      .meta-bar, .stats-bar, .action-bar { padding: 10px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🏭 職業安全衛生委員會</h1>
+    <div class="subtitle">會議事項追蹤管理系統 — 依職業安全衛生管理辦法第12條</div>
+  </div>
+  <div class="badge">📋 12項法定事項</div>
+</div>
+
+<div class="meta-bar">
+  <div>
+    <label>🏢 事業單位</label><br>
+    <input type="text" id="company" placeholder="公信電子股份有限公司" style="width:200px;min-height:auto;">
+  </div>
+  <div>
+    <label>📅 會議日期</label><br>
+    <input type="date" id="meetingDate" style="min-height:auto;">
+  </div>
+  <div>
+    <label>🔢 第幾屆第幾次</label><br>
+    <input type="text" id="meetingNo" placeholder="例：第1屆第2次" style="width:160px;min-height:auto;">
+  </div>
+  <div>
+    <label>👤 主席</label><br>
+    <input type="text" id="chairman" placeholder="主任委員姓名" style="width:130px;min-height:auto;">
+  </div>
+  <div>
+    <label>📝 記錄人</label><br>
+    <input type="text" id="recorder" placeholder="記錄人姓名" style="width:130px;min-height:auto;">
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat-card stat-done">
+    <div class="stat-icon">✅</div>
+    <div><div class="stat-num" id="cnt-done">0</div><div class="stat-label">已完成/討論</div></div>
+  </div>
+  <div class="stat-card stat-partial">
+    <div class="stat-icon">🔄</div>
+    <div><div class="stat-num" id="cnt-partial">0</div><div class="stat-label">部分完成</div></div>
+  </div>
+  <div class="stat-card stat-pending">
+    <div class="stat-icon">⚠️</div>
+    <div><div class="stat-num" id="cnt-pending">0</div><div class="stat-label">未完成/待追蹤</div></div>
+  </div>
+  <div class="stat-card stat-na">
+    <div class="stat-icon">➖</div>
+    <div><div class="stat-num" id="cnt-na">0</div><div class="stat-label">本次無討論</div></div>
+  </div>
+</div>
+
+<div class="main">
+  <div id="pendingSummary" style="display:none;" class="pending-summary">
+    <h3>⚠️ 待追蹤事項（將列入下次會議討論）</h3>
+    <ul class="pending-list" id="pendingList"></ul>
+  </div>
+  <div class="section-title">📋 12項法定審議事項</div>
+  <div id="itemsContainer"></div>
+</div>
+
+<div class="action-bar">
+  <button class="btn btn-primary" onclick="expandAll()">📂 全部展開</button>
+  <button class="btn btn-outline" onclick="collapseAll()">📁 全部收合</button>
+  <button class="btn btn-warning" onclick="showPending()">⚠️ 顯示待追蹤</button>
+  <button class="btn btn-success" onclick="exportReport()">📄 匯出會議紀錄</button>
+  <button class="btn btn-save" onclick="saveSession()">💾 儲存進度</button>
+  <button class="btn btn-load" onclick="loadSession()">📂 載入進度</button>
+  <button class="btn btn-outline" onclick="clearAll()">🗑️ 清除重填</button>
+</div>
+
+<div class="save-toast" id="saveToast">✅ 進度已儲存！</div>
+
+<script>
+  const items = [
+    { num: 1,  title: "對雇主擬訂之職業安全衛生政策提出建議",       icon: "📌", hint: "例：今年度安全衛生政策方向、目標修訂建議" },
+    { num: 2,  title: "協調、建議職業安全衛生管理計畫",             icon: "📊", hint: "例：年度管理計畫執行進度、下季計畫調整建議" },
+    { num: 3,  title: "審議安全、衛生教育訓練實施計畫",             icon: "🎓", hint: "例：本季教育訓練辦理情形、出席率、下季計畫" },
+    { num: 4,  title: "審議作業環境監測計畫、監測結果及採行措施",   icon: "🔬", hint: "例：噪音/粉塵/化學品監測結果、超標處理措施" },
+    { num: 5,  title: "審議健康管理、職業病預防及健康促進事項",     icon: "🏥", hint: "例：健檢結果統計、異常追蹤、健康促進活動辦理情形" },
+    { num: 6,  title: "審議各項安全衛生提案",                       icon: "💡", hint: "例：勞工提案改善事項、委員提案討論決議" },
+    { num: 7,  title: "審議事業單位自動檢查及安全衛生稽核事項",     icon: "🔍", hint: "例：本季自動檢查缺失統計、改善完成率、稽核結果" },
+    { num: 8,  title: "審議機械、設備或原料、材料危害之預防措施",   icon: "⚙️", hint: "例：新購設備危害評估、化學品SDS管理、安全防護措施" },
+    { num: 9,  title: "審議職業災害調查報告",                       icon: "🚨", hint: "例：本季職災件數、原因分析、改善對策追蹤" },
+    { num: 10, title: "考核現場安全衛生管理績效",                   icon: "📈", hint: "例：KPI達成率、失能傷害頻率、改善事項完成率" },
+    { num: 11, title: "審議承攬業務安全衛生管理事項",               icon: "🤝", hint: "例：承攬商資格審查、施工安全管理、廢棄物清運承攬商管理" },
+    { num: 12, title: "其他有關職業安全衛生管理事項",               icon: "📎", hint: "例：法規修訂宣導、緊急應變演練、其他臨時提案" },
+  ];
+
+  const statusMap = {
+    done:    { label: "✅ 已討論完成",    cls: "badge-done",    cardCls: "done" },
+    partial: { label: "🔄 部分完成",      cls: "badge-partial", cardCls: "partial" },
+    pending: { label: "⚠️ 未完成/待追蹤", cls: "badge-pending", cardCls: "pending" },
+    na:      { label: "➖ 本次無討論",    cls: "badge-na",      cardCls: "na" },
+  };
+
+  let data = {};
+  items.forEach(i => {
+    data[i.num] = { status: "na", content: "", action: "", carryover: "", responsible: "", deadline: "" };
+  });
+
+  function render() {
+    const container = document.getElementById("itemsContainer");
+    container.innerHTML = "";
+    items.forEach(item => {
+      const d = data[item.num];
+      const s = statusMap[d.status] || statusMap["na"];
+      const card = document.createElement("div");
+      card.className = `item-card ${s.cardCls}`;
+      card.id = `card-${item.num}`;
+      card.innerHTML = `
+        <div class="item-header" onclick="toggleItem(${item.num})">
+          <div class="item-num">${item.num}</div>
+          <div class="item-title">${item.icon} ${item.title}</div>
+          <span class="item-status-badge ${s.cls}">${s.label}</span>
+          <span class="expand-icon">▼</span>
+        </div>
+        <div class="item-body" id="body-${item.num}">
+          <div class="field-group">
+            <div class="field-label"><span class="dot" style="background:#3182ce"></span>執行狀態</div>
+            <div class="status-selector">
+              ${Object.entries(statusMap).map(([k,v]) => `
+                <button class="status-btn ${d.status===k?'active-'+k:''}"
+                  onclick="setStatus(${item.num},'${k}',event)">${v.label}</button>
+              `).join("")}
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-label"><span class="dot" style="background:#38a169"></span>討論內容 / 報告摘要</div>
+            <textarea placeholder="${item.hint}" id="content-${item.num}"
+              oninput="updateField(${item.num},'content',this.value)">${d.content}</textarea>
+          </div>
+          <div class="field-group">
+            <div class="field-label"><span class="dot" style="background:#d69e2e"></span>決議事項 / 採行措施</div>
+            <textarea placeholder="例：決議依建議辦理，由○○負責於○月○日前完成改善"
+              id="action-${item.num}" style="min-height:55px;"
+              oninput="updateField(${item.num},'action',this.value)">${d.action}</textarea>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;">
+            <div style="flex:1;min-width:140px;">
+              <div class="field-label"><span class="dot" style="background:#805ad5"></span>負責人員</div>
+              <input type="text" placeholder="負責單位/人員" id="responsible-${item.num}"
+                style="min-height:auto;"
+                oninput="updateField(${item.num},'responsible',this.value)" value="${d.responsible}">
+            </div>
+            <div style="flex:1;min-width:140px;">
+              <div class="field-label"><span class="dot" style="background:#e53e3e"></span>預計完成日期</div>
+              <input type="date" id="deadline-${item.num}"
+                style="min-height:auto;"
+                onchange="updateField(${item.num},'deadline',this.value)" value="${d.deadline}">
+            </div>
+          </div>
+          ${d.status === 'pending' || d.status === 'partial' ? `
+          <div class="carryover-box">
+            <div class="co-label">🔁 列入下次會議追蹤事項</div>
+            <textarea placeholder="說明未完成原因及下次會議預計討論重點"
+              id="carryover-${item.num}"
+              oninput="updateField(${item.num},'carryover',this.value)">${d.carryover}</textarea>
+          </div>` : ""}
+        </div>
+      `;
+      container.appendChild(card);
+    });
+    updateStats();
+  }
+
+  function toggleItem(num) {
+    const body = document.getElementById(`body-${num}`);
+    const card = document.getElementById(`card-${num}`);
+    body.classList.toggle("open");
+    card.classList.toggle("expanded");
+  }
+
+  function setStatus(num, status, e) {
+    e.stopPropagation();
+    // 儲存目前已填欄位
+    ['content','action','carryover','responsible'].forEach(f => {
+      const el = document.getElementById(`${f}-${num}`);
+      if (el) data[num][f] = el.value;
+    });
+    const dl = document.getElementById(`deadline-${num}`);
+    if (dl) data[num].deadline = dl.value;
+    data[num].status = status;
+    render();
+    const body = document.getElementById(`body-${num}`);
+    const card = document.getElementById(`card-${num}`);
+    body.classList.add("open");
+    card.classList.add("expanded");
+  }
+
+  function updateField(num, field, value) {
+    data[num][field] = value;
+    updateStats();
+  }
+
+  function updateStats() {
+    let counts = { done: 0, partial: 0, pending: 0, na: 0 };
+    items.forEach(i => { counts[data[i.num].status]++; });
+    document.getElementById("cnt-done").textContent = counts.done;
+    document.getElementById("cnt-partial").textContent = counts.partial;
+    document.getElementById("cnt-pending").textContent = counts.pending;
+    document.getElementById("cnt-na").textContent = counts.na;
+  }
+
+  function expandAll() {
+    items.forEach(i => {
+      document.getElementById(`body-${i.num}`).classList.add("open");
+      document.getElementById(`card-${i.num}`).classList.add("expanded");
+    });
+  }
+
+  function collapseAll() {
+    items.forEach(i => {
+      document.getElementById(`body-${i.num}`).classList.remove("open");
+      document.getElementById(`card-${i.num}`).classList.remove("expanded");
+    });
+  }
+
+  function showPending() {
+    const pendingItems = items.filter(i => data[i.num].status === 'pending' || data[i.num].status === 'partial');
+    const box = document.getElementById("pendingSummary");
+    const list = document.getElementById("pendingList");
+    if (pendingItems.length === 0) {
+      box.style.display = "none";
+      alert("✅ 目前無待追蹤事項！");
+      return;
+    }
+    list.innerHTML = pendingItems.map(i => {
+      const d = data[i.num];
+      return `<li><div>
+        <strong>第${i.num}項：${i.title}</strong><br>
+        <span style="color:#c53030;font-size:0.8rem;">
+          ${d.carryover ? "📌 " + d.carryover : "（尚未填寫追蹤說明）"}
+        </span>
+        ${d.responsible ? `<br><span style="color:#744210;font-size:0.78rem;">👤 負責：${d.responsible}</span>` : ""}
+        ${d.deadline ? `<span style="color:#744210;font-size:0.78rem;margin-left:12px;">📅 期限：${d.deadline}</span>` : ""}
+      </div></li>`;
+    }).join("");
+    box.style.display = "block";
+    box.scrollIntoView({ behavior: "smooth" });
+  }
+
+  // ── 儲存 / 載入進度（下載 JSON 檔） ──
+  function saveSession() {
+    const session = {
+      meta: {
+        company:     document.getElementById("company").value,
+        meetingDate: document.getElementById("meetingDate").value,
+        meetingNo:   document.getElementById("meetingNo").value,
+        chairman:    document.getElementById("chairman").value,
+        recorder:    document.getElementById("recorder").value,
+      },
+      data: data,
+      savedAt: new Date().toISOString(),
+    };
+    // 先同步目前畫面上的值
+    items.forEach(i => {
+      ['content','action','carryover','responsible'].forEach(f => {
+        const el = document.getElementById(`${f}-${i.num}`);
+        if (el) session.data[i.num][f] = el.value;
+      });
+      const dl = document.getElementById(`deadline-${i.num}`);
+      if (dl) session.data[i.num].deadline = dl.value;
+    });
+    const blob = new Blob([JSON.stringify(session, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    const date = session.meta.meetingDate || new Date().toISOString().slice(0,10);
+    a.href = URL.createObjectURL(blob);
+    a.download = `職安委員會_${date}_進度.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    const t = document.getElementById("saveToast");
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2500);
+  }
+
+  function loadSession() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const session = JSON.parse(ev.target.result);
+          // 還原 meta
+          if (session.meta) {
+            document.getElementById("company").value     = session.meta.company     || "";
+            document.getElementById("meetingDate").value = session.meta.meetingDate || "";
+            document.getElementById("meetingNo").value   = session.meta.meetingNo   || "";
+            document.getElementById("chairman").value    = session.meta.chairman    || "";
+            document.getElementById("recorder").value    = session.meta.recorder    || "";
+          }
+          // 還原 data
+          if (session.data) {
+            items.forEach(i => {
+              if (session.data[i.num]) data[i.num] = { ...data[i.num], ...session.data[i.num] };
+            });
+          }
+          render();
+          alert("✅ 進度已載入！");
+        } catch(err) {
+          alert("❌ 載入失敗，請確認檔案格式正確。");
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
+  function exportReport() {
+    const company  = document.getElementById("company").value     || "（事業單位）";
+    const date     = document.getElementById("meetingDate").value  || "（日期）";
+    const no       = document.getElementById("meetingNo").value    || "（屆次）";
+    const chairman = document.getElementById("chairman").value     || "（主席）";
+    const recorder = document.getElementById("recorder").value     || "（記錄）";
+    // 同步目前畫面值
+    items.forEach(i => {
+      ['content','action','carryover','responsible'].forEach(f => {
+        const el = document.getElementById(`${f}-${i.num}`);
+        if (el) data[i.num][f] = el.value;
+      });
+      const dl = document.getElementById(`deadline-${i.num}`);
+      if (dl) data[i.num].deadline = dl.value;
+    });
+
+    let html = `<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">
+      <title>職安委員會會議紀錄</title>
+      <style>
+        body{font-family:'Microsoft JhengHei',Arial,sans-serif;max-width:900px;margin:0 auto;padding:30px;color:#2d3748;}
+        h1{text-align:center;font-size:1.3rem;margin-bottom:6px;}
+        .meta{text-align:center;font-size:0.85rem;color:#718096;margin-bottom:20px;}
+        table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+        th,td{border:1px solid #cbd5e0;padding:8px 12px;font-size:0.85rem;vertical-align:top;}
+        th{background:#2b6cb0;color:white;font-weight:700;}
+        tr:nth-child(even){background:#f7fafc;}
+        .done{color:#276749;font-weight:700;}.partial{color:#7b6002;font-weight:700;}
+        .pending{color:#9b2c2c;font-weight:700;}.na{color:#718096;}
+        .pending-section{background:#fff5f5;border:2px solid #fc8181;border-radius:8px;padding:16px;margin-top:20px;}
+        .pending-section h3{color:#c53030;margin-bottom:10px;}
+        .footer{text-align:center;font-size:0.78rem;color:#a0aec0;margin-top:30px;border-top:1px solid #e2e8f0;padding-top:12px;}
+      </style></head><body>
+      <h1>🏭 職業安全衛生委員會 會議紀錄</h1>
+      <div class="meta">${company} ｜ ${no} ｜ 日期：${date} ｜ 主席：${chairman} ｜ 記錄：${recorder}</div>
+      <table>
+        <tr><th style="width:40px">項次</th><th>審議事項</th><th style="width:100px">執行狀態</th>
+        <th>討論內容</th><th>決議事項</th><th style="width:80px">負責人</th><th style="width:90px">完成期限</th></tr>`;
+
+    const statusLabel = { done:"✅ 已完成", partial:"🔄 部分完成", pending:"⚠️ 未完成", na:"➖ 無討論" };
+    items.forEach(item => {
+      const d = data[item.num];
+      html += `<tr>
+        <td style="text-align:center;font-weight:700">${item.num}</td>
+        <td>${item.icon} ${item.title}</td>
+        <td class="${d.status}">${statusLabel[d.status]}</td>
+        <td>${d.content || "—"}</td>
+        <td>${d.action || "—"}</td>
+        <td>${d.responsible || "—"}</td>
+        <td>${d.deadline || "—"}</td>
+      </tr>`;
+    });
+    html += `</table>`;
+
+    const pendingItems = items.filter(i => data[i.num].status === 'pending' || data[i.num].status === 'partial');
+    if (pendingItems.length > 0) {
+      html += `<div class="pending-section"><h3>⚠️ 列入下次會議追蹤事項</h3><table>
+        <tr><th>項次</th><th>事項</th><th>未完成原因/下次追蹤重點</th><th>負責人</th><th>期限</th></tr>`;
+      pendingItems.forEach(item => {
+        const d = data[item.num];
+        html += `<tr>
+          <td style="text-align:center">${item.num}</td>
+          <td>${item.title}</td>
+          <td>${d.carryover || "（待填寫）"}</td>
+          <td>${d.responsible || "—"}</td>
+          <td>${d.deadline || "—"}</td>
+        </tr>`;
+      });
+      html += `</table></div>`;
+    }
+
+    html += `<div class="footer">本紀錄依職業安全衛生管理辦法第12條規定製作，應保存三年。<br>
+      主席：${chairman} ｜ 記錄：${recorder} ｜ 列印日期：${new Date().toLocaleDateString("zh-TW")}</div>
+      </body></html>`;
+
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `職安委員會會議紀錄_${date}.html`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function clearAll() {
+    if (!confirm("確定要清除所有填寫內容嗎？")) return;
+    items.forEach(i => {
+      data[i.num] = { status: "na", content: "", action: "", carryover: "", responsible: "", deadline: "" };
+    });
+    document.getElementById("pendingSummary").style.display = "none";
+    render();
+  }
+
+  render();
+</script>
+</body>
+</html>
